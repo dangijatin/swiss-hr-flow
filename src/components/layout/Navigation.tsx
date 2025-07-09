@@ -9,9 +9,21 @@ import {
   Settings,
   Menu,
   X,
-  HelpCircle
+  HelpCircle,
+  LogOut,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface NavigationProps {
   activeSection: string;
@@ -37,6 +49,15 @@ export default function Navigation({
   onToggleTraining 
 }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, userRole, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getUserInitials = (email: string) => {
+    return email.substring(0, 2).toUpperCase();
+  };
 
   return (
     <>
@@ -112,6 +133,53 @@ export default function Navigation({
               );
             })}
           </ul>
+
+          {/* User Profile Section */}
+          <div className="absolute bottom-4 left-4 right-4">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="w-full flex items-center gap-3 p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
+                        {getUserInitials(user.email || 'U')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium truncate">{user.email}</p>
+                      {userRole && (
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {userRole.replace('_', ' ')}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" side="top">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.email}</p>
+                      {userRole && (
+                        <p className="text-xs leading-none text-muted-foreground capitalize">
+                          {userRole.replace('_', ' ')}
+                        </p>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </nav>
 

@@ -88,6 +88,7 @@ export type Database = {
           id: string
           position_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -97,6 +98,7 @@ export type Database = {
           id?: string
           position_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -106,6 +108,7 @@ export type Database = {
           id?: string
           position_id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -149,6 +152,33 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shifts: {
         Row: {
           created_at: string
@@ -176,12 +206,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
       attendance_status:
@@ -191,6 +248,7 @@ export type Database = {
         | "late"
         | "early_leave"
       employee_type: "onsite_full_time" | "hybrid" | "remote"
+      user_role: "admin" | "hr" | "team_lead" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -326,6 +384,7 @@ export const Constants = {
         "early_leave",
       ],
       employee_type: ["onsite_full_time", "hybrid", "remote"],
+      user_role: ["admin", "hr", "team_lead", "employee"],
     },
   },
 } as const
