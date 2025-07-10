@@ -5,13 +5,16 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import EmployeeList from '@/components/employees/EmployeeList';
 import DepartmentManagement from '@/components/departments/DepartmentManagement';
+import ShiftManagement from '@/components/shifts/ShiftManagement';
+import AddEmployeeModal from '@/components/employees/AddEmployeeModal';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [trainingMode, setTrainingMode] = useState(false);
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   const handleAddEmployee = () => {
-    console.log('Add employee clicked');
+    setShowAddEmployeeModal(true);
   };
 
   const handleEditEmployee = (employee: any) => {
@@ -19,11 +22,11 @@ const Index = () => {
   };
 
   const handleScheduleShift = () => {
-    console.log('Schedule shift clicked');
+    setActiveSection('shifts');
   };
 
   const handleCreateTask = () => {
-    console.log('Create task clicked');
+    setActiveSection('tasks');
   };
 
   const handleScheduleMeeting = () => {
@@ -72,17 +75,7 @@ const Index = () => {
         return <DepartmentManagement trainingMode={trainingMode} />;
 
       case 'shifts':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-swiss-h1">Shifts & Schedules</h1>
-              <p className="text-swiss-body mt-1">Manage work schedules and shift assignments</p>
-            </div>
-            <div className="swiss-card">
-              <p className="text-swiss-body">Shift management coming soon...</p>
-            </div>
-          </div>
-        );
+        return <ShiftManagement trainingMode={trainingMode} />;
 
       case 'attendance':
         return (
@@ -154,6 +147,17 @@ const Index = () => {
           {renderContent()}
         </div>
       </main>
+
+      <AddEmployeeModal
+        isOpen={showAddEmployeeModal}
+        onClose={() => setShowAddEmployeeModal(false)}
+        onSuccess={() => {
+          // Refresh employee list if on employees section
+          if (activeSection === 'employees') {
+            window.location.reload();
+          }
+        }}
+      />
     </div>
   );
 };

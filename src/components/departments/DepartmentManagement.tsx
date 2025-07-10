@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Plus, Users, UserCheck, Edit2, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Users, UserCheck, Edit2, Trash2, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Department {
   id: string;
@@ -125,17 +127,111 @@ function DepartmentCard({
 }
 
 export default function DepartmentManagement({ trainingMode }: DepartmentManagementProps) {
-  const [departments, setDepartments] = useState(mockDepartments);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleEdit = (departmentId: string) => {
-    console.log('Edit department:', departmentId);
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = async () => {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch departments",
+        variant: "destructive"
+      });
+    } else {
+      // Transform data to match interface
+      const transformedData = (data || []).map(dept => ({
+        ...dept,
+        employeeCount: 0, // TODO: Calculate from employees table
+        teamLeader: undefined, // TODO: Get from positions/employees
+        color: `bg-${['blue', 'purple', 'green', 'orange', 'red', 'pink'][Math.floor(Math.random() * 6)]}-500`
+      }));
+      setDepartments(transformedData);
+    }
   };
 
-  const handleDelete = (departmentId: string) => {
-    if (confirm('Are you sure you want to delete this department?')) {
-      setDepartments(departments.filter(d => d.id !== departmentId));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (editingDept) {
+        const { error } = await supabase
+          .from('departments')
+          .update(formData)
+          .eq('id', editingDept.id);
+
+        if (error) throw error;
+        toast({ title: "Success", description: "Department updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('departments')
+          .insert([formData]);
+
+        if (error) throw error;
+        toast({ title: "Success", description: "Department created successfully" });
+      }
+
+      fetchDepartments();
+      handleCloseForm();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: editingDept ? "Failed to update department" : "Failed to create department",
+        variant: "destructive"
+      });
     }
+    setLoading(false);
+  };
+
+  const handleEdit = (department: Department) => {
+    setEditingDept(department);
+    setFormData({
+      name: department.name,
+      description: department.description || ''
+    });
+    setShowAddForm(true);
+  };
+
+  const handleDelete = async (departmentId: string) => {
+    if (!confirm('Are you sure you want to delete this department?')) return;
+
+    const { error } = await supabase
+      .from('departments')
+      .delete()
+      .eq('id', departmentId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete department",
+        variant: "destructive"
+      });
+    } else {
+      toast({ title: "Success", description: "Department deleted successfully" });
+      fetchDepartments();
+    }
+  };
+
+  const handleCloseForm = () => {
+    setShowAddForm(false);
+    setEditingDept(null);
+    setFormData({ name: '', description: '' });
   };
 
   const totalEmployees = departments.reduce((sum, dept) => sum + dept.employeeCount, 0);
@@ -190,7 +286,7 @@ export default function DepartmentManagement({ trainingMode }: DepartmentManagem
           <DepartmentCard
             key={department.id}
             department={department}
-            onEdit={() => handleEdit(department.id)}
+            onEdit={() => handleEdit(department)}
             onDelete={() => handleDelete(department.id)}
             trainingMode={trainingMode}
           />
@@ -201,36 +297,50 @@ export default function DepartmentManagement({ trainingMode }: DepartmentManagem
       {showAddForm && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="swiss-card max-w-md w-full">
-            <h3 className="text-swiss-h3 mb-4">Add New Department</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-swiss-h3">
+                {editingDept ? 'Edit Department' : 'Add New Department'}
+              </h3>
+              <button onClick={handleCloseForm} className="btn-ghost p-2">
+                <X size={16} />
+              </button>
+            </div>
             
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Department Name</label>
-                <input type="text" className="input-swiss" placeholder="e.g., Human Resources" />
+                <input 
+                  type="text" 
+                  required
+                  className="input-swiss" 
+                  placeholder="e.g., Human Resources"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
               </div>
               
               <div>
                 <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea className="input-swiss" rows={3} placeholder="Brief description of the department"></textarea>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Team Leader (optional)</label>
-                <select className="input-swiss">
-                  <option value="">Select a team leader</option>
-                  <option value="sarah">Sarah Chen</option>
-                  <option value="michael">Michael Torres</option>
-                  <option value="emma">Emma Rodriguez</option>
-                </select>
+                <textarea 
+                  className="input-swiss" 
+                  rows={3} 
+                  placeholder="Brief description of the department"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
               </div>
               
               <div className="flex gap-2 pt-4">
-                <button type="submit" className="btn-primary flex-1">
-                  Create Department
+                <button 
+                  type="submit" 
+                  className="btn-primary flex-1"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : (editingDept ? 'Update Department' : 'Create Department')}
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => setShowAddForm(false)}
+                  onClick={handleCloseForm}
                   className="btn-secondary flex-1"
                 >
                   Cancel
