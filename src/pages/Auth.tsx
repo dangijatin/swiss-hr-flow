@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Users, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 type View = 'signin' | 'signup' | 'forgot_password';
 
@@ -36,12 +36,18 @@ export default function Auth() {
     const { error } = await signIn(email, password);
     
     if (error) {
+      console.error('Sign-in error:', error);
+      
       if (error.message.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please check your credentials and try again.');
+        setError('Your email may not be confirmed yet. Please check your email for the verification link, or try resetting your password.');
       } else if (error.message.includes('Email not confirmed')) {
         setError('Please check your email and click the confirmation link before signing in.');
+      } else if (error.message.includes('Email link is invalid or has expired')) {
+        setError('Please check your email and click the confirmation link before signing in.');
+      } else if (error.message.includes('signup is disabled')) {
+        setError('Account registration is currently disabled. Please contact support.');
       } else {
-        setError(error.message);
+        setError(`Authentication error: ${error.message}`);
       }
     }
     
@@ -75,7 +81,7 @@ export default function Auth() {
       }
     } else {
       setError(null);
-      setMessage('Please check your email for a confirmation link to complete your registration.');
+      setMessage('Account created! Please check your email and click the verification link. After verifying, you can sign in with your email and password.');
     }
     
     setIsLoading(false);
