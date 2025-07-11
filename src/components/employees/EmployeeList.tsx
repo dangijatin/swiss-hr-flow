@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Employee {
   id: string;
-  name: string;
-  position: string;
-  department: string;
+  full_name: string;
   email: string;
-  phone: string;
-  type: 'onsite' | 'hybrid' | 'remote';
-  status: 'active' | 'on-leave' | 'inactive';
-  avatar?: string;
-  startDate: string;
+  employee_type: 'onsite_full_time' | 'hybrid' | 'remote';
+  created_at: string;
+  position?: {
+    title: string;
+    department?: {
+      name: string;
+    };
+  };
 }
 
 interface EmployeeListProps {
@@ -21,52 +24,6 @@ interface EmployeeListProps {
   onEditEmployee: (employee: Employee) => void;
 }
 
-const mockEmployees: Employee[] = [
-  {
-    id: '1',
-    name: 'Sarah Chen',
-    position: 'Senior Developer',
-    department: 'Engineering',
-    email: 'sarah.chen@company.com',
-    phone: '+1 (555) 0123',
-    type: 'hybrid',
-    status: 'active',
-    startDate: '2023-01-15'
-  },
-  {
-    id: '2',
-    name: 'Michael Torres',
-    position: 'Data Analyst',
-    department: 'Analytics',
-    email: 'michael.torres@company.com',
-    phone: '+1 (555) 0124',
-    type: 'onsite',
-    status: 'active',
-    startDate: '2023-03-22'
-  },
-  {
-    id: '3',
-    name: 'Emma Rodriguez',
-    position: 'UX Designer',
-    department: 'Design',
-    email: 'emma.rodriguez@company.com',
-    phone: '+1 (555) 0125',
-    type: 'remote',
-    status: 'active',
-    startDate: '2024-01-08'
-  },
-  {
-    id: '4',
-    name: 'Alex Kim',
-    position: 'Product Manager',
-    department: 'Product',
-    email: 'alex.kim@company.com',
-    phone: '+1 (555) 0126',
-    type: 'hybrid',
-    status: 'on-leave',
-    startDate: '2022-11-30'
-  }
-];
 
 function EmployeeCard({ employee, onEdit, trainingMode }: { 
   employee: Employee; 
@@ -77,7 +34,7 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
     switch (type) {
       case 'remote': return 'bg-blue-100 text-blue-800';
       case 'hybrid': return 'bg-purple-100 text-purple-800';
-      case 'onsite': return 'bg-green-100 text-green-800';
+      case 'onsite_full_time': return 'bg-green-100 text-green-800';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -103,12 +60,12 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
             <span className="text-primary font-medium text-lg">
-              {employee.name.split(' ').map(n => n[0]).join('')}
+              {employee.full_name.split(' ').map(n => n[0]).join('')}
             </span>
           </div>
           <div>
-            <h3 className="text-swiss-h3">{employee.name}</h3>
-            <p className="text-swiss-body">{employee.position}</p>
+            <h3 className="text-swiss-h3">{employee.full_name}</h3>
+            <p className="text-swiss-body">{employee.position?.title || 'No Position'}</p>
           </div>
         </div>
         
@@ -127,13 +84,8 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
         </div>
         
         <div className="flex items-center gap-2 text-swiss-body">
-          <Phone size={14} />
-          <span>{employee.phone}</span>
-        </div>
-        
-        <div className="flex items-center gap-2 text-swiss-body">
           <MapPin size={14} />
-          <span className="capitalize">{employee.department}</span>
+          <span className="capitalize">{employee.position?.department?.name || 'No Department'}</span>
         </div>
       </div>
 
@@ -141,20 +93,14 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
         <div className="flex gap-2">
           <span className={cn(
             "px-2 py-1 text-xs rounded-full",
-            getTypeColor(employee.type)
+            getTypeColor(employee.employee_type)
           )}>
-            {employee.type}
-          </span>
-          <span className={cn(
-            "px-2 py-1 text-xs rounded-full border",
-            getStatusColor(employee.status)
-          )}>
-            {employee.status.replace('-', ' ')}
+            {employee.employee_type.replace('_', ' ')}
           </span>
         </div>
         
         <span className="text-xs text-muted-foreground">
-          Started {new Date(employee.startDate).toLocaleDateString()}
+          Started {new Date(employee.created_at).toLocaleDateString()}
         </span>
       </div>
     </div>
@@ -162,19 +108,49 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
 }
 
 export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmployee }: EmployeeListProps) {
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const filteredEmployees = mockEmployees.filter(employee => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.department.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('employees')
+      .select(`
+        *,
+        positions(
+          title,
+          departments(name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch employees",
+        variant: "destructive"
+      });
+    } else {
+      setEmployees(data || []);
+    }
+    setLoading(false);
+  };
+
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (employee.position?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (employee.position?.department?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = filterType === 'all' || employee.type === filterType;
-    const matchesStatus = filterStatus === 'all' || employee.status === filterStatus;
+    const matchesType = filterType === 'all' || employee.employee_type === filterType;
     
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType;
   });
 
   return (
@@ -211,39 +187,42 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
           className="input-swiss"
         >
           <option value="all">All Types</option>
-          <option value="onsite">Onsite</option>
+          <option value="onsite_full_time">Onsite</option>
           <option value="hybrid">Hybrid</option>
           <option value="remote">Remote</option>
-        </select>
-        
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="input-swiss"
-        >
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="on-leave">On Leave</option>
-          <option value="inactive">Inactive</option>
         </select>
       </div>
 
       {/* Employee Grid */}
-      <div className="swiss-grid">
-        {filteredEmployees.map((employee) => (
-          <EmployeeCard
-            key={employee.id}
-            employee={employee}
-            onEdit={() => onEditEmployee(employee)}
-            trainingMode={trainingMode}
-          />
-        ))}
-      </div>
-
-      {filteredEmployees.length === 0 && (
+      {loading ? (
         <div className="text-center py-12">
-          <p className="text-swiss-body">No employees found matching your criteria.</p>
+          <p className="text-swiss-body">Loading employees...</p>
         </div>
+      ) : (
+        <>
+          <div className="swiss-grid">
+            {filteredEmployees.map((employee) => (
+              <EmployeeCard
+                key={employee.id}
+                employee={employee}
+                onEdit={() => onEditEmployee(employee)}
+                trainingMode={trainingMode}
+              />
+            ))}
+          </div>
+
+          {filteredEmployees.length === 0 && employees.length > 0 && (
+            <div className="text-center py-12">
+              <p className="text-swiss-body">No employees found matching your criteria.</p>
+            </div>
+          )}
+
+          {employees.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-swiss-body">No employees yet. Add your first employee to get started.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

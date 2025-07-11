@@ -6,6 +6,9 @@ import RecentActivity from '@/components/dashboard/RecentActivity';
 import EmployeeList from '@/components/employees/EmployeeList';
 import DepartmentManagement from '@/components/departments/DepartmentManagement';
 import ShiftManagement from '@/components/shifts/ShiftManagement';
+import AttendanceManagement from '@/components/attendance/AttendanceManagement';
+import TaskManagement from '@/components/tasks/TaskManagement';
+import SettingsManagement from '@/components/settings/SettingsManagement';
 import AddEmployeeModal from '@/components/employees/AddEmployeeModal';
 
 const Index = () => {
@@ -78,43 +81,13 @@ const Index = () => {
         return <ShiftManagement trainingMode={trainingMode} />;
 
       case 'attendance':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-swiss-h1">Attendance</h1>
-              <p className="text-swiss-body mt-1">Track employee attendance and working hours</p>
-            </div>
-            <div className="swiss-card">
-              <p className="text-swiss-body">Attendance tracking coming soon...</p>
-            </div>
-          </div>
-        );
+        return <AttendanceManagement trainingMode={trainingMode} />;
 
       case 'tasks':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-swiss-h1">Tasks</h1>
-              <p className="text-swiss-body mt-1">Assign and track task progress</p>
-            </div>
-            <div className="swiss-card">
-              <p className="text-swiss-body">Task management coming soon...</p>
-            </div>
-          </div>
-        );
+        return <TaskManagement trainingMode={trainingMode} />;
 
       case 'settings':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-swiss-h1">Settings</h1>
-              <p className="text-swiss-body mt-1">Configure your workspace preferences</p>
-            </div>
-            <div className="swiss-card">
-              <p className="text-swiss-body">Settings panel coming soon...</p>
-            </div>
-          </div>
-        );
+        return <SettingsManagement trainingMode={trainingMode} />;
 
       default:
         return null;
@@ -152,10 +125,8 @@ const Index = () => {
         isOpen={showAddEmployeeModal}
         onClose={() => setShowAddEmployeeModal(false)}
         onSuccess={() => {
-          // Refresh employee list if on employees section
-          if (activeSection === 'employees') {
-            window.location.reload();
-          }
+          // Close modal and refresh if needed
+          setShowAddEmployeeModal(false);
         }}
       />
     </div>
