@@ -30,11 +30,18 @@ export default function TaskManagement({ trainingMode }: TaskManagementProps) {
   const [employees, setEmployees] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    status: 'pending' | 'in_progress' | 'completed';
+    priority: 'low' | 'medium' | 'high';
+    assigned_to: string;
+    due_date: string;
+  }>({
     title: '',
     description: '',
-    status: 'pending' as const,
-    priority: 'medium' as const,
+    status: 'pending',
+    priority: 'medium',
     assigned_to: '',
     due_date: ''
   });
@@ -308,7 +315,7 @@ export default function TaskManagement({ trainingMode }: TaskManagementProps) {
               <div className="flex items-center gap-2">
                 <User size={14} className="text-muted-foreground" />
                 <span className="text-sm">
-                  {task.assignee?.full_name || 'Unassigned'}
+                  {(task as any).employees?.full_name || 'Unassigned'}
                 </span>
               </div>
 

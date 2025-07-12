@@ -58,7 +58,7 @@ export default function AttendanceManagement({ trainingMode }: AttendanceManagem
     setLoading(false);
   };
 
-  const markAttendance = async (employeeId: string, status: string) => {
+  const markAttendance = async (employeeId: string, status: 'present' | 'absent' | 'half_day' | 'late' | 'early_leave') => {
     const { error } = await supabase
       .from('attendance')
       .upsert({
