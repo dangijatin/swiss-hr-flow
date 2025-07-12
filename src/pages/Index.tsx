@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import DashboardStats from '@/components/dashboard/DashboardStats';
@@ -8,6 +9,7 @@ import DepartmentManagement from '@/components/departments/DepartmentManagement'
 import ShiftManagement from '@/components/shifts/ShiftManagement';
 import AttendanceManagement from '@/components/attendance/AttendanceManagement';
 import TaskManagement from '@/components/tasks/TaskManagement';
+import LeaveManagement from '@/components/leaves/LeaveManagement';
 import SettingsManagement from '@/components/settings/SettingsManagement';
 import AddEmployeeModal from '@/components/employees/AddEmployeeModal';
 
@@ -85,6 +87,9 @@ const Index = () => {
 
       case 'tasks':
         return <TaskManagement trainingMode={trainingMode} />;
+
+      case 'leaves':
+        return <LeaveManagement trainingMode={trainingMode} />;
 
       case 'settings':
         return <SettingsManagement trainingMode={trainingMode} />;

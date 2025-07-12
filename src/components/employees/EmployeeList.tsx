@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin } from 'lucide-react';
+import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -10,11 +11,15 @@ interface Employee {
   email: string;
   employee_type: 'onsite_full_time' | 'hybrid' | 'remote';
   created_at: string;
+  manager_id?: string;
   position?: {
     title: string;
     department?: {
       name: string;
     };
+  };
+  manager?: {
+    full_name: string;
   };
 }
 
@@ -23,7 +28,6 @@ interface EmployeeListProps {
   onAddEmployee: () => void;
   onEditEmployee: (employee: Employee) => void;
 }
-
 
 function EmployeeCard({ employee, onEdit, trainingMode }: { 
   employee: Employee; 
@@ -35,15 +39,6 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
       case 'remote': return 'bg-blue-100 text-blue-800';
       case 'hybrid': return 'bg-purple-100 text-purple-800';
       case 'onsite_full_time': return 'bg-green-100 text-green-800';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-success/10 text-success border-success/20';
-      case 'on-leave': return 'bg-warning/10 text-warning border-warning/20';
-      case 'inactive': return 'bg-destructive/10 text-destructive border-destructive/20';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -87,6 +82,13 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
           <MapPin size={14} />
           <span className="capitalize">{employee.position?.department?.name || 'No Department'}</span>
         </div>
+
+        {employee.manager && (
+          <div className="flex items-center gap-2 text-swiss-body">
+            <User size={14} />
+            <span className="truncate">Reports to: {employee.manager.full_name}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
@@ -127,6 +129,9 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
         positions(
           title,
           departments(name)
+        ),
+        manager:employees!employees_manager_id_fkey(
+          full_name
         )
       `)
       .order('created_at', { ascending: false });
@@ -159,7 +164,7 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h1 className="text-swiss-h1">Employees</h1>
-          <p className="text-swiss-body mt-1">Manage your team members</p>
+          <p className="text-swiss-body mt-1">Manage your team members and their reporting structure</p>
         </div>
         
         <button onClick={onAddEmployee} className="btn-primary">
