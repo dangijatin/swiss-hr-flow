@@ -126,9 +126,9 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
       .from('employees')
       .select(`
         *,
-        positions(
+        position:positions(
           title,
-          departments(name)
+          department:departments(name)
         ),
         manager:employees!employees_manager_id_fkey(
           full_name
@@ -137,13 +137,26 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('Error fetching employees:', error);
       toast({
         title: "Error",
         description: "Failed to fetch employees",
         variant: "destructive"
       });
     } else {
-      setEmployees(data || []);
+      // Transform the data to match our Employee interface
+      const transformedEmployees = data?.map(emp => ({
+        ...emp,
+        position: emp.position ? {
+          title: emp.position.title,
+          department: emp.position.department ? {
+            name: emp.position.department.name
+          } : undefined
+        } : undefined,
+        manager: Array.isArray(emp.manager) && emp.manager.length > 0 ? emp.manager[0] : undefined
+      })) || [];
+      
+      setEmployees(transformedEmployees);
     }
     setLoading(false);
   };
