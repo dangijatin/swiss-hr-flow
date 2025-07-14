@@ -161,9 +161,6 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
           position:positions(
             title,
             department:departments(name)
-          ),
-          manager:employees!employees_manager_id_fkey(
-            full_name
           )
         `)
         .order('created_at', { ascending: false });
@@ -185,7 +182,7 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
               name: emp.position.department.name
             } : undefined
           } : undefined,
-          manager: Array.isArray(emp.manager) && emp.manager.length > 0 ? emp.manager[0] : undefined
+          manager: { full_name: 'N/A' } // Placeholder since manager field doesn't exist yet
         })) || [];
         
         setEmployees(transformedEmployees);
