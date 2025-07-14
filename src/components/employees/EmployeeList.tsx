@@ -1,9 +1,24 @@
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, User } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Mail, MapPin, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Employee {
   id: string;
@@ -64,12 +79,28 @@ function EmployeeCard({ employee, onEdit, trainingMode }: {
           </div>
         </div>
         
-        <button 
-          onClick={onEdit}
-          className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost p-2"
-        >
-          <MoreHorizontal size={16} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <MoreHorizontal size={16} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              Edit Employee
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              Assign Manager
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="space-y-3">
@@ -122,41 +153,50 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
 
   const fetchEmployees = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        position:positions(
-          title,
-          department:departments(name)
-        ),
-        manager:employees!employees_manager_id_fkey(
-          full_name
-        )
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select(`
+          *,
+          position:positions(
+            title,
+            department:departments(name)
+          ),
+          manager:employees!employees_manager_id_fkey(
+            full_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching employees:', error);
+      if (error) {
+        console.error('Error fetching employees:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch employees",
+          variant: "destructive"
+        });
+      } else {
+        // Transform the data to match our Employee interface
+        const transformedEmployees: Employee[] = data?.map(emp => ({
+          ...emp,
+          position: emp.position ? {
+            title: emp.position.title,
+            department: emp.position.department ? {
+              name: emp.position.department.name
+            } : undefined
+          } : undefined,
+          manager: Array.isArray(emp.manager) && emp.manager.length > 0 ? emp.manager[0] : undefined
+        })) || [];
+        
+        setEmployees(transformedEmployees);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
       toast({
         title: "Error",
-        description: "Failed to fetch employees",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } else {
-      // Transform the data to match our Employee interface
-      const transformedEmployees = data?.map(emp => ({
-        ...emp,
-        position: emp.position ? {
-          title: emp.position.title,
-          department: emp.position.department ? {
-            name: emp.position.department.name
-          } : undefined
-        } : undefined,
-        manager: Array.isArray(emp.manager) && emp.manager.length > 0 ? emp.manager[0] : undefined
-      })) || [];
-      
-      setEmployees(transformedEmployees);
     }
     setLoading(false);
   };
@@ -180,35 +220,36 @@ export default function EmployeeList({ trainingMode, onAddEmployee, onEditEmploy
           <p className="text-swiss-body mt-1">Manage your team members and their reporting structure</p>
         </div>
         
-        <button onClick={onAddEmployee} className="btn-primary">
+        <Button onClick={onAddEmployee}>
           <Plus size={16} className="mr-2" />
           Add Employee
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-          <input
+          <Input
             type="text"
             placeholder="Search employees..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-swiss pl-10"
+            className="pl-10"
           />
         </div>
         
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="input-swiss"
-        >
-          <option value="all">All Types</option>
-          <option value="onsite_full_time">Onsite</option>
-          <option value="hybrid">Hybrid</option>
-          <option value="remote">Remote</option>
-        </select>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="onsite_full_time">Onsite</SelectItem>
+            <SelectItem value="hybrid">Hybrid</SelectItem>
+            <SelectItem value="remote">Remote</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Employee Grid */}

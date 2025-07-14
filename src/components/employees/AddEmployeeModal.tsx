@@ -1,7 +1,24 @@
+
 import { useState, useEffect } from 'react';
 import { X, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface Department {
   id: string;
@@ -42,6 +59,10 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
   useEffect(() => {
     if (selectedDepartment) {
       fetchPositions(selectedDepartment);
+      // Reset position when department changes
+      setFormData(prev => ({ ...prev, position_id: '' }));
+    } else {
+      setPositions([]);
     }
   }, [selectedDepartment]);
 
@@ -97,6 +118,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
       .insert([formData]);
 
     if (error) {
+      console.error('Error adding employee:', error);
       toast({
         title: "Error",
         description: "Failed to add employee",
@@ -125,106 +147,111 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="swiss-card max-w-md w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-swiss-h3">Add New Employee</h3>
-          <button onClick={handleClose} className="btn-ghost p-2">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Employee</DialogTitle>
+        </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Full Name</label>
-            <input 
+          <div className="space-y-2">
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input 
+              id="full_name"
               type="text" 
               required
-              className="input-swiss" 
               placeholder="John Doe"
               value={formData.full_name}
               onChange={(e) => setFormData({...formData, full_name: e.target.value})}
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input 
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email"
               type="email" 
               required
-              className="input-swiss" 
               placeholder="john@company.com"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Department</label>
-            <select 
-              className="input-swiss"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              required
-            >
-              <option value="">Select Department</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <Label>Department</Label>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Department" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Position</label>
-            <select 
-              className="input-swiss"
-              value={formData.position_id}
-              onChange={(e) => setFormData({...formData, position_id: e.target.value})}
-              required
+          <div className="space-y-2">
+            <Label>Position</Label>
+            <Select 
+              value={formData.position_id} 
+              onValueChange={(value) => setFormData({...formData, position_id: value})}
               disabled={!selectedDepartment}
             >
-              <option value="">Select Position</option>
-              {positions.map((pos) => (
-                <option key={pos.id} value={pos.id}>{pos.title}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Position" />
+              </SelectTrigger>
+              <SelectContent>
+                {positions.map((pos) => (
+                  <SelectItem key={pos.id} value={pos.id}>
+                    {pos.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-1">Work Type</label>
-            <select 
-              className="input-swiss"
-              value={formData.employee_type}
-              onChange={(e) => setFormData({...formData, employee_type: e.target.value as any})}
+          <div className="space-y-2">
+            <Label>Work Type</Label>
+            <Select 
+              value={formData.employee_type} 
+              onValueChange={(value: any) => setFormData({...formData, employee_type: value})}
             >
-              <option value="onsite_full_time">Onsite Full Time</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="remote">Remote</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="onsite_full_time">Onsite Full Time</SelectItem>
+                <SelectItem value="hybrid">Hybrid</SelectItem>
+                <SelectItem value="remote">Remote</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex gap-2 pt-4">
-            <button 
+            <Button 
               type="submit" 
-              className="btn-primary flex-1"
+              className="flex-1"
               disabled={loading}
             >
               <Plus size={16} className="mr-2" />
               {loading ? 'Adding...' : 'Add Employee'}
-            </button>
-            <button 
+            </Button>
+            <Button 
               type="button" 
+              variant="outline"
               onClick={handleClose}
-              className="btn-secondary flex-1"
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import DashboardStats from '@/components/dashboard/DashboardStats';
@@ -36,6 +35,12 @@ const Index = () => {
 
   const handleScheduleMeeting = () => {
     console.log('Schedule meeting clicked');
+  };
+
+  const handleAddEmployeeSuccess = () => {
+    setShowAddEmployeeModal(false);
+    // If we're on the employees section, the list should refresh automatically
+    // due to the onSuccess callback in the modal
   };
 
   const renderContent = () => {
@@ -129,10 +134,7 @@ const Index = () => {
       <AddEmployeeModal
         isOpen={showAddEmployeeModal}
         onClose={() => setShowAddEmployeeModal(false)}
-        onSuccess={() => {
-          // Close modal and refresh if needed
-          setShowAddEmployeeModal(false);
-        }}
+        onSuccess={handleAddEmployeeSuccess}
       />
     </div>
   );
