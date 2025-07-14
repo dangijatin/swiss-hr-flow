@@ -86,6 +86,7 @@ export type Database = {
           employee_type: Database["public"]["Enums"]["employee_type"]
           full_name: string
           id: string
+          manager_id: string | null
           position_id: string
           updated_at: string
           user_id: string | null
@@ -96,6 +97,7 @@ export type Database = {
           employee_type?: Database["public"]["Enums"]["employee_type"]
           full_name: string
           id?: string
+          manager_id?: string | null
           position_id: string
           updated_at?: string
           user_id?: string | null
@@ -106,11 +108,19 @@ export type Database = {
           employee_type?: Database["public"]["Enums"]["employee_type"]
           full_name?: string
           id?: string
+          manager_id?: string | null
           position_id?: string
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_position_id_fkey"
             columns: ["position_id"]
